@@ -63,6 +63,17 @@ has parameters => (
   default => sub { {} },
 );
 
+# env, read_length, and read_position used to be part of Engine but 
+# those were global and now need to be set per-request
+has env => (
+  is => 'ro',
+  writer => '_set_env',
+);
+
+# input position and length
+has read_length => (is => 'rw');
+has read_position => (is => 'rw');
+
 # TODO:
 # - Can we lose the before modifiers which just call prepare_body ?
 #   they are wasteful, slow us down and feel cluttery.
@@ -304,6 +315,18 @@ Returns a reference to a hash containing the cookies.
 The cookies in the hash are indexed by name, and the values are L<CGI::Simple::Cookie>
 objects.
 
+=head2 $req->env
+
+Hash containing environment variables including many special variables inserted
+by WWW server - like SERVER_*, REMOTE_*, HTTP_* ...
+
+Before accessing environment variables consider whether the same information is
+not directly available via other $req methods ...
+
+BEWARE: If you really need to access some environment variable from your Catalyst
+application you should use $c->request->env->{VARNAME} instead of $ENV{VARNAME},
+as in some environments the %ENV hash does not contain what you would expect.
+
 =head2 $req->header
 
 Shortcut for $req->headers->header.
@@ -479,6 +502,15 @@ used in a while loop, reading $maxlength bytes on every call. $maxlength
 defaults to the size of the request if not specified.
 
 You have to set MyApp->config(parse_on_demand => 1) to use this directly.
+
+=head2 $req->read_length
+
+The length of input data to be read.  This is obtained from the Content-Length
+header.
+
+=head2 $req->read_position
+
+The amount of input data that has already been read.
 
 =head2 $req->referer
 

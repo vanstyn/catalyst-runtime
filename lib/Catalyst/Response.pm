@@ -27,6 +27,20 @@ has _context => (
   clearer => '_clear_context',
 );
 
+has _prepared_write => (is => 'rw');
+
+has _response_cb => (
+  is      => 'ro',
+  isa     => 'CodeRef',
+  writer  => '_set_response_cb',
+  predicate => '_has_response_cb',
+);
+
+has _writer => (
+  is      => 'ro',
+  writer  => '_set_writer',
+);
+
 sub output { shift->body(@_) }
 
 sub code   { shift->status(@_) }

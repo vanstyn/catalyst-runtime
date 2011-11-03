@@ -10,50 +10,12 @@ use HTML::Entities;
 use HTTP::Body;
 use HTTP::Headers;
 use URI::QueryParam;
-use Moose::Util::TypeConstraints;
 use Plack::Loader;
 use Catalyst::EngineLoader;
 use Encode ();
 use utf8;
 
 use namespace::clean -except => 'meta';
-
-has env => (is => 'ro', writer => '_set_env', clearer => '_clear_env');
-
-my $WARN_ABOUT_ENV = 0;
-around env => sub {
-  my ($orig, $self, @args) = @_;
-  if(@args) {
-    warn "env as a writer is deprecated, you probably need to upgrade Catalyst::Engine::PSGI"
-      unless $WARN_ABOUT_ENV++;
-    return $self->_set_env(@args);
-  }
-  return $self->$orig;
-};
-
-# input position and length
-has read_length => (is => 'rw');
-has read_position => (is => 'rw');
-
-has _prepared_write => (is => 'rw');
-
-has _response_cb => (
-    is      => 'ro',
-    isa     => 'CodeRef',
-    writer  => '_set_response_cb',
-    clearer => '_clear_response_cb',
-    predicate => '_has_response_cb',
-);
-
-subtype 'Catalyst::Engine::Types::Writer',
-    as duck_type([qw(write close)]);
-
-has _writer => (
-    is      => 'ro',
-    isa     => 'Catalyst::Engine::Types::Writer',
-    writer  => '_set_writer',
-    clearer => '_clear_writer',
-);
 
 # Amount of data to read from input on each pass
 our $CHUNKSIZE = 64 * 1024;
@@ -79,7 +41,9 @@ Finalize body.  Prints the response output.
 
 sub finalize_body {
     my ( $self, $c ) = @_;
-    my $body = $c->response->body;
+    my $response = $c->response;
+    
+    my $body = $response->body;
     no warnings 'uninitialized';
     if ( blessed($body) && $body->can('read') or ref($body) eq 'GLOB' ) {
         my $got;
@@ -94,9 +58,7 @@ sub finalize_body {
         $self->write( $c, $body );
     }
 
-    $self->_writer->close;
-    $self->_clear_writer;
-    $self->_clear_env;
+    $response->_writer->close;
 
     return;
 }
@@ -350,21 +312,22 @@ Abstract method, allows engines to write headers to response
 
 sub finalize_headers {
     my ($self, $ctx) = @_;
+    
+    my $response = $ctx->response;
 
     # This is a less-than-pretty hack to avoid breaking the old
     # Catalyst::Engine::PSGI. 5.9 Catalyst::Engine sets a response_cb and
-    # expects us to pass headers to it here, whereas Catalyst::Enngine::PSGI
+    # expects us to pass headers to it here, whereas Catalyst::Engine::PSGI
     # just pulls the headers out of $ctx->response in its run method and never
     # sets response_cb. So take the lack of a response_cb as a sign that we
     # don't need to set the headers.
 
-    return unless $self->_has_response_cb;
+    return unless $response->_has_response_cb;
 
     my @headers;
-    $ctx->response->headers->scan(sub { push @headers, @_ });
+    $response->headers->scan(sub { push @headers, @_ });
 
-    $self->_set_writer($self->_response_cb->([ $ctx->response->status, \@headers ]));
-    $self->_clear_response_cb;
+    $response->_set_writer($response->_response_cb->([ $response->status, \@headers ]));
 
     return;
 }
@@ -405,8 +368,8 @@ sub prepare_body {
     my ( $self, $c ) = @_;
 
     my $appclass = ref($c) || $c;
-    if ( my $length = $self->read_length ) {
-        my $request = $c->request;
+    my $request = $c->request;
+    if ( my $length = $request->read_length ) {
         unless ( $request->_body ) {
             my $type = $request->header('Content-Type');
             $request->_body(HTTP::Body->new( $type, $length ));
@@ -421,7 +384,7 @@ sub prepare_body {
         }
 
         # paranoia against wrong Content-Length header
-        my $remaining = $length - $self->read_position;
+        my $remaining = $length - $request->read_position;
         if ( $remaining > 0 ) {
             $self->finalize_read($c);
             Catalyst::Exception->throw(
@@ -469,8 +432,8 @@ Abstract method implemented in engines.
 sub prepare_connection {
     my ($self, $ctx) = @_;
 
-    my $env = $self->env;
     my $request = $ctx->request;
+    my $env = $request->env;
 
     $request->address( $env->{REMOTE_ADDR} );
     $request->hostname( $env->{REMOTE_HOST} )
@@ -504,7 +467,7 @@ sub prepare_cookies {
 sub prepare_headers {
     my ($self, $ctx) = @_;
 
-    my $env = $self->env;
+    my $env = $ctx->request->env;
     my $headers = $ctx->request->headers;
 
     for my $header (keys %{ $env }) {
@@ -554,9 +517,10 @@ abstract method, implemented by engines.
 sub prepare_path {
     my ($self, $ctx) = @_;
 
-    my $env = $self->env;
+    my $request = $ctx->request;
+    my $env = $request->env;
 
-    my $scheme    = $ctx->request->secure ? 'https' : 'http';
+    my $scheme    = $request->secure ? 'https' : 'http';
     my $host      = $env->{HTTP_HOST} || $env->{SERVER_NAME};
     my $port      = $env->{SERVER_PORT} || 80;
     my $base_path = $env->{SCRIPT_NAME} || "/";
@@ -594,7 +558,7 @@ sub prepare_path {
     my $query = $env->{QUERY_STRING} ? '?' . $env->{QUERY_STRING} : '';
     my $uri   = $scheme . '://' . $host . '/' . $path . $query;
 
-    $ctx->request->uri( (bless \$uri, $uri_class)->canonical );
+    $request->uri( (bless \$uri, $uri_class)->canonical );
 
     # set the base URI
     # base must end in a slash
@@ -602,12 +566,10 @@ sub prepare_path {
 
     my $base_uri = $scheme . '://' . $host . $base_path;
 
-    $ctx->request->base( bless \$base_uri, $uri_class );
+    $request->base( bless \$base_uri, $uri_class );
 
     return;
 }
-
-=head2 $self->prepare_request($c)
 
 =head2 $self->prepare_query_parameters($c)
 
@@ -618,8 +580,11 @@ process the query string and extract query parameters.
 sub prepare_query_parameters {
     my ($self, $c) = @_;
 
-    my $query_string = exists $self->env->{QUERY_STRING}
-        ? $self->env->{QUERY_STRING}
+    my $request = $c->request;
+    my $env = $request->env;
+    
+    my $query_string = exists $env->{QUERY_STRING}
+        ? $env->{QUERY_STRING}
         : '';
 
     # Check for keywords (no = signs)
@@ -657,7 +622,7 @@ sub prepare_query_parameters {
         }
     }
 
-    $c->request->query_parameters( \%query );
+    $request->query_parameters( \%query );
 }
 
 =head2 $self->prepare_read($c)
@@ -668,12 +633,14 @@ prepare to read from the engine.
 
 sub prepare_read {
     my ( $self, $c ) = @_;
+    
+    my $request = $c->request;
 
     # Initialize the read position
-    $self->read_position(0);
+    $request->read_position(0);
 
     # Initialize the amount of data we think we need to read
-    $self->read_length( $c->request->header('Content-Length') || 0 );
+    $request->read_length( $request->header('Content-Length') || 0 );
 }
 
 =head2 $self->prepare_request(@arguments)
@@ -684,7 +651,8 @@ Populate the context object from the request object.
 
 sub prepare_request {
     my ($self, $ctx, %args) = @_;
-    $self->_set_env($args{env});
+    $ctx->request->_set_env($args{env});
+    $ctx->response->_set_response_cb($args{response_cb});
 }
 
 =head2 $self->prepare_uploads($c)
@@ -751,8 +719,10 @@ Maintains the read_length and read_position counters as data is read.
 
 sub read {
     my ( $self, $c, $maxlength ) = @_;
+    
+    my $request = $c->request;
 
-    my $remaining = $self->read_length - $self->read_position;
+    my $remaining = $request->read_length - $request->read_position;
     $maxlength ||= $CHUNKSIZE;
 
     # Are we done reading?
@@ -769,7 +739,7 @@ sub read {
             $self->finalize_read;
             return;
         }
-        $self->read_position( $self->read_position + $rc );
+        $request->read_position( $request->read_position + $rc );
         return $buffer;
     }
     else {
@@ -788,17 +758,8 @@ there is no more data to be read.
 
 sub read_chunk {
     my ($self, $ctx) = (shift, shift);
-    return $self->env->{'psgi.input'}->read(@_);
+    return $ctx->request->env->{'psgi.input'}->read(@_);
 }
-
-=head2 $self->read_length
-
-The length of input data to be read.  This is obtained from the Content-Length
-header.
-
-=head2 $self->read_position
-
-The amount of input data that has already been read.
 
 =head2 $self->run($app, $server)
 
@@ -851,8 +812,7 @@ sub build_psgi_app {
 
         return sub {
             my ($respond) = @_;
-            $self->_set_response_cb($respond);
-            $app->handle_request(env => $env);
+            $app->handle_request(env => $env, response_cb => $respond);
         };
     };
 }
@@ -865,16 +825,18 @@ Writes the buffer to the client.
 
 sub write {
     my ( $self, $c, $buffer ) = @_;
+    
+    my $response = $c->response;
 
-    unless ( $self->_prepared_write ) {
+    unless ( $response->_prepared_write ) {
         $self->prepare_write($c);
-        $self->_prepared_write(1);
+        $response->_prepared_write(1);
     }
 
     $buffer = q[] unless defined $buffer;
 
     my $len = length($buffer);
-    $self->_writer->write($buffer);
+    $response->_writer->write($buffer);
 
     return $len;
 }
@@ -897,18 +859,6 @@ sub unescape_uri {
 =head2 $self->finalize_output
 
 <obsolete>, see finalize_body
-
-=head2 $self->env
-
-Hash containing environment variables including many special variables inserted
-by WWW server - like SERVER_*, REMOTE_*, HTTP_* ...
-
-Before accessing environment variables consider whether the same information is
-not directly available via Catalyst objects $c->request, $c->engine ...
-
-BEWARE: If you really need to access some environment variable from your Catalyst
-application you should use $c->engine->env->{VARNAME} instead of $ENV{VARNAME},
-as in some environments the %ENV hash does not contain what you would expect.
 
 =head1 AUTHORS
 

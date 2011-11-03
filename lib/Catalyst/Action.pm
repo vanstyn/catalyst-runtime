@@ -88,6 +88,11 @@ sub compare {
     return $a1_args <=> $a2_args;
 }
 
+sub is_async {
+    my $self = shift;
+    return exists $self->attributes->{Async};
+}
+
 __PACKAGE__->meta->make_immutable;
 
 1;
@@ -129,6 +134,10 @@ Always returns true if Args is omitted.
 
 Compares 2 actions based on the value of the C<Args> attribute, with no C<Args>
 having the highest precedence.
+
+=head2 is_async
+
+Returns true if the action should be run asynchronously.
 
 =head2 namespace
 

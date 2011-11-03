@@ -122,11 +122,13 @@ sub _AUTO : Private {
 
 sub _ACTION : Private {
     my ( $self, $c ) = @_;
-    if (   ref $c->action
-        && $c->action->can('execute')
+    my $action = $c->action;
+    if (   ref $action
+        && $action->can('execute')
         && defined $c->req->action )
     {
-        $c->action->dispatch( $c );
+        $action->dispatch( $c );
+        $c->_async(1) if $action->is_async;
     }
     return !@{ $c->error };
 }

@@ -49,6 +49,8 @@ has counter => (is => 'rw', default => sub { {} });
 has request => (is => 'rw', default => sub { $_[0]->request_class->new({}) }, required => 1, lazy => 1);
 has response => (is => 'rw', default => sub { $_[0]->response_class->new({}) }, required => 1, lazy => 1);
 has namespace => (is => 'rw');
+has _async => (is => 'rw', default => 0);
+has _async_finish => (is => 'rw');
 
 sub depth { scalar @{ shift->stack || [] }; }
 sub comp { shift->component(@_) }
@@ -1712,6 +1714,7 @@ sub _stats_start_execute {
 
     my $action = $action_name;
     $action = "/$action" unless $action =~ /->/;
+    $action .= ' (async)' if $code->is_async;
 
     # determine if the call was the result of a forward
     # this is done by walking up the call stack and looking for a calling
@@ -1957,6 +1960,14 @@ Called to handle each HTTP request.
 
 sub handle_request {
     my ( $class, @arguments ) = @_;
+    
+    my $logger = sub {
+        $COUNT++;
+
+        if (my $coderef = $class->log->can('_flush')) {
+            $class->log->$coderef();
+        }
+    };
 
     # Always expect worst case!
     my $status = -1;
@@ -1970,19 +1981,52 @@ sub handle_request {
 
         my $c = $class->prepare(@arguments);
         $c->dispatch;
+        
+        if ($c->_async) {            
+            # Create a callback the action can use to signal it is done
+            my $cv = AnyEvent->condvar;
+            $cv->cb( sub {
+                shift->recv;
+                $c->finalize;
+                $logger->();
+            } );
+            
+            $c->_async_finish($cv);
+            
+            if ($class->debug) {
+                $class->log->debug("Waiting for controller to finish...");
+            }
+            
+            return;
+        }
+        
         $status = $c->finalize;
     }
     catch {
         chomp(my $error = $_);
         $class->log->error(qq/Caught exception in engine "$error"/);
     };
-
-    $COUNT++;
-
-    if(my $coderef = $class->log->can('_flush')){
-        $class->log->$coderef();
-    }
+    
+    $logger->();
+    
     return $status;
+}
+
+=head2 finish()
+
+Signal that the response is ready to be sent. Should only be called for asynchronous methods.
+
+=cut
+
+sub finish {
+    my $c = shift;
+    
+    if ($c->_async) {
+        $c->_async_finish->();
+    }
+    else {
+        $c->log->warn("finish() called for non-async method");
+    }
 }
 
 =head2 $class->prepare( @arguments )
