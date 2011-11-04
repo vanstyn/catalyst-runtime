@@ -7,6 +7,7 @@ sub _plack_engine_name { 'CGI' }
 with 'Catalyst::ScriptRole';
 
 __PACKAGE__->meta->make_immutable;
+1;
 
 =head1 NAME
 
@@ -22,6 +23,10 @@ Catalyst::Script::CGI - The CGI Catalyst Script
 =head1 DESCRIPTION
 
 This is a script to run the Catalyst engine specialized for the CGI environment.
+
+=head1 SEE ALSO
+
+L<Catalyst::ScriptRunner>
 
 =head1 AUTHORS
 

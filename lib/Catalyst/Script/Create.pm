@@ -51,6 +51,7 @@ sub run {
 }
 
 __PACKAGE__->meta->make_immutable;
+1;
 
 =head1 NAME
 
@@ -89,6 +90,10 @@ Create a new Catalyst Component.
 Existing component files are not overwritten.  If any of the component files
 to be created already exist the file will be written with a '.new' suffix.
 This behavior can be suppressed with the C<--force> option.
+
+=head1 SEE ALSO
+
+L<Catalyst::ScriptRunner>
 
 =head1 AUTHORS
 

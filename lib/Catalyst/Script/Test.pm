@@ -17,6 +17,7 @@ sub run {
 
 
 __PACKAGE__->meta->make_immutable;
+1;
 
 =head1 NAME
 
@@ -32,6 +33,10 @@ Catalyst::Script::Test - Test Catalyst application on the command line
 =head1 DESCRIPTION
 
 Script to perform a test hit against your application and display the output.
+
+=head1 SEE ALSO
+
+L<Catalyst::ScriptRunner>
 
 =head1 AUTHORS
 
