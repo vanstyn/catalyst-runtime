@@ -75,9 +75,11 @@ sub finalize_body {
         $self->write( $c, $body );
     }
 
-    my $res = $c->response;
-    $res->_writer->close;
-    $res->_clear_writer;
+    unless ($c->config->{do_not_automatically_close_writer}) {
+        my $res = $c->response;
+        $res->_writer->close;
+        $res->_clear_writer;
+    }
 
     return;
 }
