@@ -37,6 +37,7 @@ use Plack::Middleware::Conditional;
 use Plack::Middleware::ReverseProxy;
 use Plack::Middleware::IIS6ScriptNameFix;
 use Plack::Middleware::LighttpdScriptNameFix;
+use Scope::Guard;
 
 BEGIN { require 5.008004; }
 
@@ -1076,6 +1077,12 @@ sub setup {
     $class->setup_home( delete $flags->{home} );
 
     $class->setup_log( delete $flags->{log} );
+
+    my $guard;
+    if ($class->log->can('_flush')) {
+        $guard = Scope::Guard->new(sub { $class->log->_flush });
+    }
+
     $class->setup_plugins( delete $flags->{plugins} );
     $class->setup_dispatcher( delete $flags->{dispatcher} );
     if (my $engine = delete $flags->{engine}) {
@@ -1197,9 +1204,11 @@ EOF
     }
 
     $class->setup_finalize;
-    # Should be the last thing we do so that user things hooking
-    # setup_finalize can log..
-    $class->log->_flush() if $class->log->can('_flush');
+
+    # Let the guard go out of scope, log everything from setup
+    # this is so that we log everything (like config file path!)
+    # even if we catch an exception and exit early.
+
     return 1; # Explicit return true as people have __PACKAGE__->setup as the last thing in their class. HATE.
 }
 

@@ -1,5 +1,12 @@
 # This file documents the revision history for Perl extension Catalyst.
 
+ Bug fixes:
+  - Load messages (such as the config file which has been loaded) will now be
+    emitted rather than supressed in cases where an exception is thrown
+    during setup when using the default logger. Previously an error (such
+    as a missing required attribute in a model) would raise an exception, but
+    log messages emitted up to that point would be lost.
+
 5.90007 - 2011-11-22 20:35:00
 
   New features:
