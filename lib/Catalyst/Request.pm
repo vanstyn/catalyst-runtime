@@ -86,7 +86,8 @@ sub prepare_headers {
 has _log => (
     is => 'ro',
     weak_ref => 1,
-    required => 1,
+    required => 0,
+    predicate => '_has__log'
 );
 
 # Amount of data to read from input on each pass
@@ -252,7 +253,7 @@ around parameters => sub {
             $self->_log->warn(
                 "Attempt to retrieve '$params' with req->params(), " .
                 "you probably meant to call req->param('$params')"
-            );
+            ) if $self->_has__log;
             $params = undef;
         }
         return $self->$orig($params);
