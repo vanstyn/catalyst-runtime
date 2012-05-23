@@ -8,9 +8,4 @@ sub COMPONENT {
 
 package AClass;
 
-### Turning this off on purpose to test out instances
-### without COMPONENT or subclassing
-
-#use base 'Catalyst::View';
-
 1;
