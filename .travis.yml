@@ -14,6 +14,8 @@ install:
    # M::I deps
    - cpanm --notest --metacpan --skip-satisfied Module::Install Module::Install::AuthorRequires Module::Install::CheckConflicts Module::Install::AuthorTests Module::Install::Authority
 
+   - cpanm --notest --metacpan --skip-satisfied Devel::Cover::Report::Coveralls
+
    # author deps -- wish there was a better way
    - cpanm --notest --metacpan --skip-satisfied CatalystX::LeakChecker Catalyst::Devel Catalyst::Engine::PSGI Starman MooseX::Daemonize Test::WWW::Mechanize::Catalyst Catalyst::Plugin::Params::Nested
    - cpanm --notest --metacpan --skip-satisfied Test::Without::Module Test::NoTabs Test::Pod Test::Pod::Coverage Test::Spelling Pod::Coverage::TrustPod
@@ -30,4 +32,8 @@ install:
    - make manifest
 
 script:
-   - make disttest
+   - PERL5OPT=-MDevel::Cover=-coverage,statement,branch,condition,path,subroutine make disttest
+   - cover
+
+after_success:
+  - cover -report coveralls
