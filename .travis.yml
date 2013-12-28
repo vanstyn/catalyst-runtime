@@ -9,17 +9,18 @@ perl:
 
 install:
    # for testing
-   - cpanm --notest --metacpan --skip-satisfied YAML
+   - cpanm --notest --metacpan --skip-satisfied --quiet YAML
 
    # M::I deps
-   - cpanm --notest --metacpan --skip-satisfied Module::Install Module::Install::AuthorRequires Module::Install::CheckConflicts Module::Install::AuthorTests Module::Install::Authority
+   - cpanm --notest --metacpan --skip-satisfied --quiet Module::Install Module::Install::AuthorRequires Module::Install::CheckConflicts Module::Install::AuthorTests Module::Install::Authority
 
-   - cpanm --notest --metacpan --skip-satisfied Devel::Cover::Report::Coveralls
+    #coveralls.io stuff
+   - cpanm --notest --metacpan --skip-satisfied --quiet Devel::Cover Devel::Cover::Report::Coveralls
 
    # author deps -- wish there was a better way
-   - cpanm --notest --metacpan --skip-satisfied CatalystX::LeakChecker Catalyst::Devel Catalyst::Engine::PSGI Starman MooseX::Daemonize Test::WWW::Mechanize::Catalyst Catalyst::Plugin::Params::Nested
-   - cpanm --notest --metacpan --skip-satisfied Test::Without::Module Test::NoTabs Test::Pod Test::Pod::Coverage Test::Spelling Pod::Coverage::TrustPod
-   - cpanm --notest --metacpan --skip-satisfied --installdeps .
+   - cpanm --notest --metacpan --skip-satisfied --quiet CatalystX::LeakChecker Catalyst::Devel Catalyst::Engine::PSGI Starman MooseX::Daemonize Test::WWW::Mechanize::Catalyst Catalyst::Plugin::Params::Nested
+   - cpanm --notest --metacpan --skip-satisfied --quiet Test::Without::Module Test::NoTabs Test::Pod Test::Pod::Coverage Test::Spelling Pod::Coverage::TrustPod
+   - cpanm --notest --metacpan --skip-satisfied --quiet --installdeps .
    - echo y | perl Makefile.PL
 
    # enable various test options, including parallel testing
