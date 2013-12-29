@@ -15,7 +15,7 @@ install:
    - cpanm --notest --metacpan --skip-satisfied --quiet Module::Install Module::Install::AuthorRequires Module::Install::CheckConflicts Module::Install::AuthorTests Module::Install::Authority
 
     #coveralls.io stuff
-   - cpanm --notest --metacpan --skip-satisfied --quiet ExtUtils::MakeMaker Devel::Cover::Report::Coveralls
+   - cpanm --notest --metacpan --quiet ExtUtils::MakeMaker Devel::Cover::Report::Coveralls
 
    # author deps -- wish there was a better way
    - cpanm --notest --metacpan --skip-satisfied --quiet CatalystX::LeakChecker Catalyst::Devel Catalyst::Engine::PSGI Starman MooseX::Daemonize Test::WWW::Mechanize::Catalyst Catalyst::Plugin::Params::Nested
