@@ -15,7 +15,7 @@ install:
    - cpanm --notest --metacpan --skip-satisfied --quiet Module::Install Module::Install::AuthorRequires Module::Install::CheckConflicts Module::Install::AuthorTests Module::Install::Authority
 
     #coveralls.io stuff
-   - cpanm --notest --metacpan --skip-satisfied --quiet Devel::Cover Devel::Cover::Report::Coveralls
+   - cpanm --notest --metacpan --skip-satisfied --quiet ExtUtils::MakeMaker Devel::Cover::Report::Coveralls
 
    # author deps -- wish there was a better way
    - cpanm --notest --metacpan --skip-satisfied --quiet CatalystX::LeakChecker Catalyst::Devel Catalyst::Engine::PSGI Starman MooseX::Daemonize Test::WWW::Mechanize::Catalyst Catalyst::Plugin::Params::Nested
@@ -37,6 +37,4 @@ install:
    - cd $(perl -MCPAN::Meta -e '$m = CPAN::Meta->load_file("MYMETA.yml"); print $m->name . "-" . $m->version')
    - perl Makefile.PL
 script:
-   - PERL5OPT=-MDevel::Cover=-coverage,statement,branch,condition,path,subroutine make test
-after_success:
-   - cover -report coveralls
+   - cover -test -report coveralls
