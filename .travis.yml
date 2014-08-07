@@ -34,7 +34,7 @@ install:
    - make manifest
 
 script:
-   - HARNESS_PERL_SWITCHES=-MDevel::Cover=-coverage,statement,branch,condition,path,subroutine make disttest
+   - PERL5OPT=-MDevel::Cover=-coverage,statement,branch,condition,path,subroutine prove -j10 -lrs t
 
 after_success:
    - cover && cover -report coveralls

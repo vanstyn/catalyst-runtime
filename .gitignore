@@ -15,3 +15,4 @@
 /Catalyst-Runtime-*
 *.bs
 /t/tmp
+cover_db/
