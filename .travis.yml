@@ -33,6 +33,8 @@ install:
 script:
    - make disttest
 
-   # Also make sure at least Catalyst::Devel can build/install:
+   # Also make sure at least these other core reverse deps can build/install:
    - make install
    - cpanm --test-only Catalyst::Devel
+   - cpanm --test-only Catalyst::Plugin::Static::Simple
+   - cpanm --test-only Catalyst::Plugin::Authentication
