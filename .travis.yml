@@ -38,13 +38,13 @@ script:
    - make install
    - cpanm --test-only Catalyst::Devel
    - cpanm --test-only Catalyst::View::TT
-   - cpanm --test-only Catalyst::View::Email
-   - cpanm --test-only Catalyst::Action::REST
+   - cpanm --test-only -v Catalyst::View::Email
+   - cpanm --test-only -v Catalyst::Action::REST
    - cpanm --test-only Catalyst::Component::InstancePerContext
-   - cpanm --test-only Catalyst::Plugin::Session
+   - cpanm --test-only -v Catalyst::Plugin::Session
    - cpanm --test-only Catalyst::Plugin::Session::State::Cookie
-   - cpanm --test-only Catalyst::Plugin::Session::Store::File
+   - cpanm --test-only -v Catalyst::Plugin::Session::Store::File
    - cpanm --test-only Catalyst::Plugin::Static::Simple
    - cpanm --test-only Catalyst::Plugin::Authentication
-   - cpanm --test-only Catalyst::Plugin::I18N
+   - cpanm --test-only -v Catalyst::Plugin::I18N
    - cpanm --test-only Catalyst::Plugin::ConfigLoader
